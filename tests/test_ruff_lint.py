@@ -198,9 +198,7 @@ def f():
 
     diags = ruff_lint.pylsp_lint(workspace, doc)
 
-    _list = []
-    for diag in diags:
-        _list.append(diag["code"])
+    _list = [diag["code"] for diag in diags]
     # Assert that ignore, extend-ignore and extend-select is working as intended
     assert "E402" in _list
     assert "D103" in _list

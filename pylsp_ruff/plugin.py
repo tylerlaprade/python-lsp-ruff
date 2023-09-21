@@ -92,8 +92,7 @@ def pylsp_format_document(workspace: Workspace, document: Document) -> Generator
     """
     log.debug(f"textDocument/formatting: {document}")
     outcome = yield
-    result = outcome.get_result()
-    if result:
+    if result := outcome.get_result():
         source = result[0]["newText"]
     else:
         source = document.source
@@ -163,10 +162,7 @@ def create_diagnostic(check: RuffCheck, settings: PluginSettings) -> Diagnostic:
         if custom_sev is not None:
             severity = DIAGNOSTIC_SEVERITIES.get(custom_sev, severity)
 
-    tags = []
-    if check.code in UNNECESSITY_CODES:
-        tags = [DiagnosticTag.Unnecessary]
-
+    tags = [DiagnosticTag.Unnecessary] if check.code in UNNECESSITY_CODES else []
     return Diagnostic(
         source=DIAGNOSTIC_SOURCE,
         code=check.code,
@@ -385,13 +381,12 @@ def run_ruff_check(document: Document, settings: PluginSettings) -> List[RuffChe
 
 
 def run_ruff_fix(document: Document, settings: PluginSettings) -> str:
-    result = run_ruff(
+    return run_ruff(
         document_path=document.path,
         document_source=document.source,
         fix=True,
         settings=settings,
     )
-    return result
 
 
 def run_ruff_format(
@@ -405,14 +400,13 @@ def run_ruff_format(
     extra_arguments = [
         f"--fixable={','.join(fixable_codes)}",
     ]
-    result = run_ruff(
+    return run_ruff(
         settings=settings,
         document_path=document_path,
         document_source=document_source,
         fix=True,
         extra_arguments=extra_arguments,
     )
-    return result
 
 
 def run_ruff(
@@ -488,11 +482,7 @@ def build_arguments(
     -------
     List containing the arguments.
     """
-    args = []
-    # Suppress update announcements
-    args.append("--quiet")
-    # Use the json formatting for easier evaluation
-    args.append("--format=json")
+    args = ["--quiet", "--format=json"]
     if fix:
         args.append("--fix")
     else:
@@ -526,11 +516,11 @@ def build_arguments(
         args.append(f"--extend-ignore={','.join(settings.extend_ignore)}")
 
     if settings.per_file_ignores:
-        for path, errors in settings.per_file_ignores.items():
-            if not PurePath(document_path).match(path):
-                continue
-            args.append(f"--ignore={','.join(errors)}")
-
+        args.extend(
+            f"--ignore={','.join(errors)}"
+            for path, errors in settings.per_file_ignores.items()
+            if PurePath(document_path).match(path)
+        )
     if extra_arguments:
         args.extend(extra_arguments)
 
